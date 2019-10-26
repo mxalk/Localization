@@ -1,28 +1,30 @@
 """ Server analyzing json MAC:RSSI to determine location """
-import socket
-import json
 import logging
+import asyncio
+import json
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class LocalizationProcessor(object):
     """ Class handling requests """
 
-    def _init_(self, host='localhost', port=2000, bufferSize  = 1024):
-        self.bufferSize = bufferSize
-        self.UDPServerSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.UDPServerSocket.bind((host, port))
-        _LOGGER.debug("Server up, at %s %s", host, port)
-        self.run()
+    def _init_(self, port=2000):
 
-    def run(self):
-        while (True):
-            data = self.UDPServerSocket.recvfrom(self.bufferSize)
-            try:
-                self.handle(data)
-            except:
-                print("Exception")
+        self.loop = asyncio.get_event_loop()
+        self.loop.create_datagram_endpoint(self, local_addr=('localhost', port))
+        self.loop.run_forever()
 
-    def handle(data):
-        data = json.loads(data)
-        print(data)
+        _LOGGER.debug("Server up at port %s", port)
+
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+
+    def datagram_received(self, data, addr):
+        message = data.decode()
+        print('Received from %s message %s', message, addr)
+        print(json.loads(data))
+        # print('Send %r to %s' % (message, addr))
+        # self.transport.sendto(data, addr)
