@@ -9,7 +9,7 @@ _LOGGER = logging.getLogger(__name__)
 class LocalizationProcessor(object):
     """ Class handling requests """
 
-    def _init_(self, port=2000):
+    def __init__(self, port=2000):
 
         self.loop = asyncio.get_event_loop()
         self.loop.create_datagram_endpoint(self, local_addr=('localhost', port))
