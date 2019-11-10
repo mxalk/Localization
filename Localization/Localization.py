@@ -6,10 +6,10 @@ import json
 _LOGGER = logging.getLogger(__name__)
 
 ROOMS = 8
-BUCKETS = 50
-RSSI_OFFSET = 25
-
-BUCKET_SIZE = (100-RSSI_OFFSET)/BUCKETS
+# BUCKETS = 50
+# RSSI_OFFSET = 0
+#
+# BUCKET_SIZE = (101-RSSI_OFFSET)/BUCKETS
 ITER = 0
 
 class Reader:
@@ -26,7 +26,7 @@ class Reader:
             _LOGGER.error("NO JSON: %s", e)
             return
 
-        m.print()
+        # m.print()
         room = m.read(jsondata)
         global ITER
         print("%5d) ROOM: %d" % (ITER, room))
@@ -52,9 +52,10 @@ class Writer:
                 continue
             rssi = jsondata[mac]
             rssi = abs(int(rssi))
-            m.write_map(mac, rssi, room)
+            if m.write_map(mac, rssi, room):
+                m.save()
 
-        m.print()
+        # m.print()
         global ITER
         print("%5d) WRITE: %d" % (ITER, room))
         ITER+=1
@@ -63,27 +64,31 @@ class Writer:
 class Mapper:
     """ Class handling data """
 
-    def __init__(self):
+    def __init__(self, read_filename, write_filename):
         self.data = {}
+        if read_filename:
+            self.load(read_filename)
+        self.write_filename = write_filename
 
     def write_map(self, mac, rssi, data):
-        rssi = int(rssi//BUCKET_SIZE)-RSSI_OFFSET
         if mac not in self.data:
             self.data[mac] = {}
         if rssi not in self.data[mac]:
             self.data[mac][rssi] = []
         if data not in self.data[mac][rssi]:
             self.data[mac][rssi].append(data)
-        self.save()
+            print("New entry: %s %d %d" % (mac, rssi, data))
+            return True
+        return False
 
     def read(self, jsondata):
         global_data = m.data
         all_rooms = []
-        for i in range(ROOMS):
+        for i in range(ROOMS+1):
             all_rooms.append(0)
         for mac in jsondata:
             rssi = jsondata[mac]
-            rssi = int(abs(int(rssi))//BUCKET_SIZE)
+            rssi = abs(int(rssi))
             if mac in global_data:
                 if rssi in global_data[mac]:
                     for room in self.data[mac][rssi]:
@@ -95,24 +100,18 @@ class Mapper:
         if all_rooms[room] == 0:
             return -1
         return room
-        # rooms = []
-        # rooms.append(m.data[mac][rssi])
-        # if len(rooms) == 0:
-        #     return [0]
-        # return rooms
-        # return 0
 
     def print(self):
         print("%17s" % ("MAC \\ RSSI"), end="")
-        for bucket in range(BUCKETS):
-            print("%4s" % (str(int(bucket*BUCKET_SIZE)+RSSI_OFFSET)), end="")
+        for rssi in range(101):
+            print("%4s" % (str(rssi)), end="")
         print('')
         for mac in self.data:
             print("%17s" % (mac), end="")
-            for bucket in range(BUCKETS):
+            for rssi in range(101):
                 data = ""
-                if bucket in self.data[mac]:
-                    rooms = self.data[mac][bucket]
+                if rssi in self.data[mac]:
+                    rooms = self.data[mac][rssi]
                     acc = 0
                     for item in rooms:
                         acc += 2**(item-1)
@@ -121,22 +120,47 @@ class Mapper:
             print('')
         print('')
 
-    def save(self, file):
-        string = "MAC"
-        for bucket in range(BUCKETS):
-            string += ";"+str(int(bucket*BUCKET_SIZE)+RSSI_OFFSET)
-        string += '\n'
+    def save(self):
+        if not self.write_filename:
+            return
+        print("WRITING TO %s" % (self.write_filename))
+        string = ""
         for mac in self.data:
             string += mac
-            for bucket in range(BUCKETS):
+            for rssi in range(101):
                 string += ';'
-                if bucket in self.data[mac]:
-                    string += str(self.data[mac][bucket])
+                if rssi in self.data[mac]:
+                    rooms = self.data[mac][rssi]
+                    acc = 0
+                    for room in rooms:
+                        acc += 2 ** (room - 1)
+                    string += str(acc)
             string += '\n'
-        print(string)
+        f = open(self.write_filename, 'w')
+        f.write(string)
 
-
-m = Mapper()
+    def load(self, filename):
+        print("LOADING DATA")
+        f = open(filename, 'r').read().split('\n')
+        for row in f[:-1]:
+            row_data = row.split(';')
+            mac = row_data[0]
+            for rssi in range(101):
+                rooms = row_data[1:][int(rssi)]
+                if rooms == '':
+                    continue
+                rooms = float(rooms)
+                room = 0
+                while rooms >= 1:
+                    room += 1
+                    if rooms % 2 == 1:
+                        print("retrieving %s %s %s" % (mac, rssi, room))
+                        self.write_map(mac, int(rssi), int(room))
+                    rooms = rooms // 2
+                # for room in rooms:
+                #     print(room)
+                #     print("retrieving %s %s %s" % (mac, rssi, room))
+                #     self.write_map(mac, int(rssi), int(room))
 
 
 class Server:
@@ -144,7 +168,10 @@ class Server:
 
     default_port = 2000
 
-    def __init__(self, port=default_port):
+    def __init__(self, port=default_port, read_filename=None, write_filename=None):
+        global m
+        m = Mapper(read_filename, write_filename)
+
         self.default_port=port
         self.loop = asyncio.get_event_loop()
         listen = self.loop.create_datagram_endpoint(Reader, local_addr=('0.0.0.0', port))
