@@ -46,15 +46,7 @@ class Writer:
         except Exception as e:
             _LOGGER.error("NO JSON: %s", e)
             return
-        room = 0
-        for mac in jsondata:
-            if mac == "#":
-                room = int(jsondata[mac])
-                continue
-            rssi = jsondata[mac]
-            rssi = abs(int(rssi))
-            if m.write_map(mac, rssi, room):
-                m.save()
+        room = m.write(jsondata)
 
         # m.print()
         global ITER

@@ -1,6 +1,9 @@
+import math
 
 ROOMS = 8
-
+MAX_RSSI = 100
+LOG_BASE = 1.4
+BUCKETS = 100
 
 class Mapper:
     """ Class handling data """
@@ -11,6 +14,18 @@ class Mapper:
         if read_filename:
             self.load(read_filename)
         self.write_filename = write_filename
+
+    def write(self, jsondata):
+        room = 0
+        for mac in jsondata:
+            if mac == "#":
+                room = int(jsondata[mac])
+                continue
+            rssi = jsondata[mac]
+            rssi = convert_rssi(rssi)
+            if self.write_map(mac, rssi, room):
+                self.save()
+        return room
 
     def write_map(self, mac, rssi, data):
         if mac not in self.data:
@@ -34,7 +49,7 @@ class Mapper:
             all_rooms.append(0)
         for mac in jsondata:
             rssi = jsondata[mac]
-            rssi = abs(int(rssi))
+            rssi = convert_rssi(rssi)
             if mac in global_data:
                 if rssi in global_data[mac]:
                     for room in self.data[mac][rssi]:
@@ -70,14 +85,12 @@ class Mapper:
             print('')
         print('')
 
-    def save(self):
-        if not self.write_filename:
-            return
-        print("WRITING TO %s" % self.write_filename)
+
+    def toCSV(self):
         string = ""
         for mac in self.data:
             string += mac
-            for rssi in range(101):
+            for rssi in range(BUCKETS):
                 string += ','
                 if rssi in self.data[mac]:
                     rooms = self.data[mac][rssi]
@@ -86,6 +99,13 @@ class Mapper:
                         acc += 2 ** (room - 1)
                     string += str(acc)
             string += '\n'
+        return string
+
+    def save(self):
+        if not self.write_filename:
+            return
+        print("WRITING TO %s" % self.write_filename)
+        string = self.toCSV()
         f = open(self.write_filename, 'w')
         f.write(string)
 
@@ -95,7 +115,7 @@ class Mapper:
         for row in f[:-1]:
             row_data = row.split(',')
             mac = row_data[0]
-            for rssi in range(101):
+            for rssi in range(1, BUCKETS):
                 rooms = row_data[1:][int(rssi)]
                 if rooms == '':
                     continue
@@ -107,3 +127,11 @@ class Mapper:
                         print("retrieving %s %s %s" % (mac, rssi, room))
                         self.write_map(mac, int(rssi), int(room))
                     rooms = rooms // 2
+
+
+def convert_rssi(rssi):
+    return abs(int(rssi))
+    rssi = int(math.log(abs(int(rssi)), LOG_BASE))
+    global BUCKETS
+    BUCKETS = math.ceil(math.log(MAX_RSSI, LOG_BASE))
+    return rssi
