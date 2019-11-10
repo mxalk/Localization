@@ -1,6 +1,7 @@
 
 ROOMS = 8
 
+
 class Mapper:
     """ Class handling data """
 
@@ -51,12 +52,12 @@ class Mapper:
         return room
 
     def print(self):
-        print("%17s" % ("MAC \\ RSSI"), end="")
+        print("%17s" % "MAC \\ RSSI", end="")
         for rssi in range(101):
             print("%4s" % (str(rssi)), end="")
         print('')
         for mac in self.data:
-            print("%17s" % (mac), end="")
+            print("%17s" % mac, end="")
             for rssi in range(101):
                 data = ""
                 if rssi in self.data[mac]:
@@ -65,14 +66,14 @@ class Mapper:
                     for item in rooms:
                         acc += 2**(item-1)
                     data = acc
-                print("%4s" % (data), end="")
+                print("%4s" % data, end="")
             print('')
         print('')
 
     def save(self):
         if not self.write_filename:
             return
-        print("WRITING TO %s" % (self.write_filename))
+        print("WRITING TO %s" % self.write_filename)
         string = ""
         for mac in self.data:
             string += mac
@@ -106,8 +107,3 @@ class Mapper:
                         print("retrieving %s %s %s" % (mac, rssi, room))
                         self.write_map(mac, int(rssi), int(room))
                     rooms = rooms // 2
-                # for room in rooms:
-                #     print(room)
-                #     print("retrieving %s %s %s" % (mac, rssi, room))
-                #     self.write_map(mac, int(rssi), int(room))
-

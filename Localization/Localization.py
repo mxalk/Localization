@@ -11,6 +11,7 @@ _LOGGER = logging.getLogger(__name__)
 # BUCKET_SIZE = (101-RSSI_OFFSET)/BUCKETS
 ITER = 0
 
+
 class Reader:
     """ Class handling reads """
 
@@ -29,7 +30,8 @@ class Reader:
         room = m.read(jsondata)
         global ITER
         print("%5d) ROOM: %d" % (ITER, room))
-        ITER+=1
+        ITER += 1
+
 
 class Writer:
     """ Class handling writes """
@@ -57,7 +59,7 @@ class Writer:
         # m.print()
         global ITER
         print("%5d) WRITE: %d" % (ITER, room))
-        ITER+=1
+        ITER += 1
 
 
 class Server:
