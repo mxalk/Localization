@@ -66,6 +66,7 @@ class Mapper:
 
     def __init__(self, read_filename, write_filename):
         self.data = {}
+        self.rooms = {}
         if read_filename:
             self.load(read_filename)
         self.write_filename = write_filename
@@ -78,6 +79,10 @@ class Mapper:
         if data not in self.data[mac][rssi]:
             self.data[mac][rssi].append(data)
             print("New entry: %s %d %d" % (mac, rssi, data))
+            if data not in self.rooms:
+                self.rooms[data] = []
+            if mac not in self.rooms[data]:
+                self.rooms[data].append(mac)
             return True
         return False
 
@@ -93,10 +98,16 @@ class Mapper:
                 if rssi in global_data[mac]:
                     for room in self.data[mac][rssi]:
                         all_rooms[room] += 1
-        room = all_rooms.index(max(all_rooms))
+        results = []
+        print(self.rooms)
         for i in range(ROOMS):
-            print("%d: %d" % (i, all_rooms[i]))
+            if i in self.rooms:
+                results.append(all_rooms[i]*100/len(self.rooms[i]))
+            else:
+                results.append(0)
+            print("%d: %3d" % (i, results[i]))
         print()
+        room = results.index(max(results))
         if all_rooms[room] == 0:
             return -1
         return room
