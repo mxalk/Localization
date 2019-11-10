@@ -74,10 +74,67 @@ class Mapper:
             self.data[mac][rssi] = []
         if data not in self.data[mac][rssi]:
             self.data[mac][rssi].append(data)
+        self.save()
+
+    def read(self, jsondata):
+        global_data = m.data
+        all_rooms = []
+        for i in range(ROOMS):
+            all_rooms.append(0)
+        for mac in jsondata:
+            rssi = jsondata[mac]
+            rssi = int(abs(int(rssi))//BUCKET_SIZE)
+            if mac in global_data:
+                if rssi in global_data[mac]:
+                    for room in self.data[mac][rssi]:
+                        all_rooms[room] += 1
+        room = all_rooms.index(max(all_rooms))
+        for i in range(ROOMS):
+            print("%d: %d" % (i, all_rooms[i]))
+        print()
+        if all_rooms[room] == 0:
+            return -1
+        return room
+        # rooms = []
+        # rooms.append(m.data[mac][rssi])
+        # if len(rooms) == 0:
+        #     return [0]
+        # return rooms
+        # return 0
+
+    def print(self):
+        print("%17s" % ("MAC \\ RSSI"), end="")
+        for bucket in range(BUCKETS):
+            print("%4s" % (str(int(bucket*BUCKET_SIZE)+RSSI_OFFSET)), end="")
+        print('')
+        for mac in self.data:
+            print("%17s" % (mac), end="")
+            for bucket in range(BUCKETS):
+                data = ""
+                if bucket in self.data[mac]:
+                    rooms = self.data[mac][bucket]
+                    acc = 0
+                    for item in rooms:
+                        acc += 2**(item-1)
+                    data = acc
+                print("%4s" % (data), end="")
+            print('')
+        print('')
 
     def save(self, file):
         string = "MAC"
         for bucket in range(BUCKETS):
+            string += ";"+str(int(bucket*BUCKET_SIZE)+RSSI_OFFSET)
+        string += '\n'
+        for mac in self.data:
+            string += mac
+            for bucket in range(BUCKETS):
+                string += ';'
+                if bucket in self.data[mac]:
+                    string += str(self.data[mac][bucket])
+            string += '\n'
+        print(string)
+
 
 m = Mapper()
 
