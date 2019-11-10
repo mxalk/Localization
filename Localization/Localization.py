@@ -5,35 +5,60 @@ import json
 
 _LOGGER = logging.getLogger(__name__)
 
-class Server:
-    """ Class initializing server """
+ROOMS = 8
+BUCKETS = 50
+RSSI_OFFSET = 25
 
-    def __init__(self, port=2000):
+BUCKET_SIZE = (100-RSSI_OFFSET)/BUCKETS
+ITER = 0
 
-        self.loop = asyncio.get_event_loop()
-        listen = self.loop.create_datagram_endpoint(Handler, local_addr=('127.0.0.1', port))
-        self. loop.run_until_complete(listen)
-        self.loop.run_forever()
-
-        _LOGGER.debug("Server up at port %s", port)
-
-
-class Handler:
-    """ Class handling requests """
+class Reader:
+    """ Class handling reads """
 
     def connection_made(self, transport):
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        message = data.decode().strip('\n')
-        _LOGGER.debug('Received from %s message "%s"', addr, message)
+        # _LOGGER.debug('Received from %s message "%s"', addr, message)
         try:
-            jsondata = json.loads(data)
+            jsondata = json.loads(data)[0]
         except Exception as e:
             _LOGGER.error("NO JSON: %s", e)
             return
-        # print('Send %r to %s' % (message, addr))
-        # self.transport.sendto(data, addr)
+
+        m.print()
+        room = m.read(jsondata)
+        global ITER
+        print("%5d) ROOM: %d" % (ITER, room))
+        ITER+=1
+
+class Writer:
+    """ Class handling writes """
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        # _LOGGER.debug('Received from %s message "%s"', addr, message)
+        try:
+            jsondata = json.loads(data)[0]
+        except Exception as e:
+            _LOGGER.error("NO JSON: %s", e)
+            return
+        room = 0
+        for mac in jsondata:
+            if mac == "#":
+                room = int(jsondata[mac])
+                continue
+            rssi = jsondata[mac]
+            rssi = abs(int(rssi))
+            m.write_map(mac, rssi, room)
+
+        m.print()
+        global ITER
+        print("%5d) WRITE: %d" % (ITER, room))
+        ITER+=1
+
 
 class Mapper:
     """ Class handling data """
@@ -42,19 +67,39 @@ class Mapper:
         self.data = {}
 
     def write_map(self, mac, rssi, data):
+        rssi = int(rssi//BUCKET_SIZE)-RSSI_OFFSET
         if mac not in self.data:
             self.data[mac] = {}
         if rssi not in self.data[mac]:
-            self.data[mac] = []
+            self.data[mac][rssi] = []
         if data not in self.data[mac][rssi]:
             self.data[mac][rssi].append(data)
 
-    def write_json_map(self, dict_map, data):
-        for mac, rssi in dict_map:
-            self.add_map(mac, rssi, data)
+    def save(self, file):
+        string = "MAC"
+        for bucket in range(BUCKETS):
 
-    def read(self, dict_map):
-        data = []
-        for mac, rssi in dict_map:
-            data.append(self.data[mac][rssi])
+m = Mapper()
 
+
+class Server:
+    """ Class initializing server """
+
+    default_port = 2000
+
+    def __init__(self, port=default_port):
+        self.default_port=port
+        self.loop = asyncio.get_event_loop()
+        listen = self.loop.create_datagram_endpoint(Reader, local_addr=('0.0.0.0', port))
+        self. loop.run_until_complete(listen)
+        _LOGGER.debug("Reader up at port %s", port)
+
+    def add_write_server(self, port=default_port+1):
+        self.loop = asyncio.get_event_loop()
+        listen = self.loop.create_datagram_endpoint(Writer, local_addr=('0.0.0.0', port))
+        self. loop.run_until_complete(listen)
+        _LOGGER.debug("Writer up at port %s", port)
+
+    def looper(self):
+        self.loop = asyncio.get_event_loop()
+        self.loop.run_forever()

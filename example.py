@@ -6,4 +6,7 @@ logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 logger.addHandler(handler)
 
-Localization.LocalizationServer(2001)
+server = Localization.Server(2000)
+server.add_write_server(2001)
+server.looper()
+# server.
