@@ -99,14 +99,12 @@ class Mapper:
                     for room in self.data[mac][rssi]:
                         all_rooms[room] += 1
         results = []
-        print(self.rooms)
         for i in range(ROOMS):
-            if i in self.rooms:
-                results.append(all_rooms[i]*100/len(self.rooms[i]))
-            else:
+            if i not in self.rooms:
                 results.append(0)
-            print("%d: %3d" % (i, results[i]))
-        print()
+                continue
+            results.append(all_rooms[i]*100/len(self.rooms[i]))
+            print("%d: %3d%% confidence (%d/%d)" % (i, results[i], all_rooms[i], len(self.rooms[i])))
         room = results.index(max(results))
         if all_rooms[room] == 0:
             return -1
@@ -139,7 +137,7 @@ class Mapper:
         for mac in self.data:
             string += mac
             for rssi in range(101):
-                string += ';'
+                string += ','
                 if rssi in self.data[mac]:
                     rooms = self.data[mac][rssi]
                     acc = 0
@@ -154,7 +152,7 @@ class Mapper:
         print("LOADING DATA")
         f = open(filename, 'r').read().split('\n')
         for row in f[:-1]:
-            row_data = row.split(';')
+            row_data = row.split(',')
             mac = row_data[0]
             for rssi in range(101):
                 rooms = row_data[1:][int(rssi)]
