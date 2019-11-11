@@ -5,6 +5,7 @@ MAX_RSSI = 100
 LOG_BASE = 1.4
 BUCKETS = 100
 
+
 class Mapper:
     """ Class handling data """
 
@@ -44,26 +45,65 @@ class Mapper:
 
     def read(self, jsondata):
         global_data = self.data
-        all_rooms = []
-        for i in range(ROOMS+1):
-            all_rooms.append(0)
+        all_rooms1 = []
+        all_rooms2 = []
+        all_rooms3 = []
+        for i in range(ROOMS):
+            all_rooms1.append(0)
+            all_rooms2.append(0)
+            all_rooms3.append(0)
         for mac in jsondata:
             rssi = jsondata[mac]
             rssi = convert_rssi(rssi)
             if mac in global_data:
                 if rssi in global_data[mac]:
                     for room in self.data[mac][rssi]:
-                        all_rooms[room] += 1
-        results = []
+                        all_rooms1[room] += 1
+                        all_rooms2[room] += 1 / len(self.data[mac][rssi])
+                        if len(self.data[mac][rssi]) == 1:
+                            all_rooms3[room] += 1
+        results1 = []
         for i in range(ROOMS):
             if i not in self.rooms:
-                results.append(0)
+                results1.append(0)
                 continue
-            results.append(all_rooms[i]*100/len(self.rooms[i]))
-            print("%d: %3d%% confidence (%d/%d)" % (i, results[i], all_rooms[i], len(self.rooms[i])))
+            results1.append(all_rooms1[i] * 100 / len(self.rooms[i]))
+        room1 = results1.index(max(results1))
+
+        results2 = []
+        max_item = all_rooms2[0]
+        for i in range(ROOMS):
+            score = all_rooms2[i]
+            if score > max_item:
+                max_item = score
+                results2 = [i]
+            elif score == max_item:
+                results2.append(i)
+        room2 = results2
+        if len(results2) == 1:
+            room2 = results2[0]
+
+        results3 = []
+        room3 = all_rooms3.index(max(all_rooms3))
+
+        for i in range(0, ROOMS):
+            if i not in self.rooms:
+                continue
+            print("%d: %4.1f%% confidence (%d/%d)  |            %4.1f  |  %4.1f" % (
+                i, results1[i], all_rooms1[i], len(self.rooms[i]), all_rooms2[i], all_rooms3[i]))
+        print("ROOMS:\t\t      %d    |%17s |    %s" % (room1, str(room2), str(room3)))
+
+        results = []
+        for i in range(0, ROOMS):
+            results.append(0)
+        results[room1] += 1
+        if type(room2) == list:
+            for room in room2:
+                results[room] += 1
+        else:
+            results[room2] += 2
+        results[room3] += 1
         room = results.index(max(results))
-        if all_rooms[room] == 0:
-            return -1
         return room
 
     def print(self):
@@ -79,12 +119,35 @@ class Mapper:
                     rooms = self.data[mac][rssi]
                     acc = 0
                     for item in rooms:
-                        acc += 2**(item-1)
+                        acc += 2 ** (item - 1)
                     data = acc
                 print("%4s" % data, end="")
             print('')
         print('')
 
+    def print_hightlight(self, jsondata):
+        string = "\n\n\n----------------------------------------------------------------------------------------------" \
+                 "----------------------------------------------------------------------------------------------\n"
+        for mac in self.data:
+            string += mac
+            string_extra = ''
+            found_room = 0
+            for rssi in range(BUCKETS):
+                string_extra += ','
+                if rssi in self.data[mac]:
+                    rooms = self.data[mac][rssi]
+                    acc = 0
+                    for room in rooms:
+                        acc += 2 ** (room - 1)
+                    if mac in jsondata and rssi == convert_rssi(jsondata[mac]):
+                        string_extra += u"\u2588"
+                        found_room = acc
+                    else:
+                        string_extra += str(acc)
+            string += " (" + str(found_room) + ") "
+            string += string_extra
+            string += '\n'
+        print(string)
 
     def toCSV(self):
         string = ""

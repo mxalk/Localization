@@ -26,7 +26,7 @@ class Reader:
             _LOGGER.error("NO JSON: %s", e)
             return
 
-        # m.print()
+        m.print_hightlight(jsondata)
         room = m.read(jsondata)
         global ITER
         print("%5d) ROOM: %d" % (ITER, room))
