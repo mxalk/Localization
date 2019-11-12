@@ -89,9 +89,9 @@ class Mapper:
         for i in range(0, ROOMS):
             if i not in self.rooms:
                 continue
-            print("%d: %4.1f%% confidence (%d/%d)  |            %4.1f  |  %4.1f" % (
+            print("%d: %4.1f%% confidence (%d/%2d)  |            %4.1f  |  %4.1f" % (
                 i, results1[i], all_rooms1[i], len(self.rooms[i]), all_rooms2[i], all_rooms3[i]))
-        print("ROOMS:\t\t      %d    |%17s |    %s" % (room1, str(room2), str(room3)))
+        print("ROOMS:\t\t      %d     |%17s |    %s" % (room1, str(room2), str(room3)))
 
         results = []
         for i in range(0, ROOMS):
@@ -190,6 +190,22 @@ class Mapper:
                         print("retrieving %s %s %s" % (mac, rssi, room))
                         self.write_map(mac, int(rssi), int(room))
                     rooms = rooms // 2
+
+    def remove_room(self, room):
+        assert (0 < room < ROOMS)
+        tuples = []
+        for mac in self.data:
+            for rssi in self.data[mac]:
+                if room in self.data[mac][rssi]:
+                    if len(self.data[mac][rssi]) == 1:
+                        tuples.append((mac, rssi))
+                        continue
+                    self.data[mac][rssi].remove(room)
+        for (mac, rssi) in tuples:
+            del self.data[mac][rssi]
+        del self.rooms[room]
+        print(self.data)
+
 
 
 def convert_rssi(rssi):
