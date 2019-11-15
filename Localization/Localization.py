@@ -26,8 +26,7 @@ class Reader:
             _LOGGER.error("NO JSON: %s", e)
             return
 
-        m.print_hightlight(jsondata)
-        room = m.read(jsondata)
+        room = b.read(jsondata)
         global ITER
         print("%5d) ROOM: %d" % (ITER, room))
         ITER += 1
@@ -46,7 +45,7 @@ class Writer:
         except Exception as e:
             _LOGGER.error("NO JSON: %s", e)
             return
-        room = m.write(jsondata)
+        room = b.write(jsondata)
 
         # m.print()
         global ITER
@@ -59,11 +58,11 @@ class Server:
 
     default_port = 2000
 
-    def __init__(self, mapper, port=default_port):
-        if not mapper:
+    def __init__(self, backend, port=default_port):
+        if not backend:
             raise Exception()
-        global m
-        m = mapper
+        global b
+        b = backend
         self.default_port=port
         self.loop = asyncio.get_event_loop()
         listen = self.loop.create_datagram_endpoint(Reader, local_addr=('0.0.0.0', port))
