@@ -16,7 +16,10 @@ class Mapper:
         for mac in jsondata:
             if mac == "#":
                 room = int(jsondata[mac])
-                continue
+                break
+        if room == 0:
+            return 0
+        for mac in jsondata:
             rssi = jsondata[mac]
             rssi = Utilities.convert_rssi(rssi)
             if self.write_map(mac, rssi, room):
@@ -170,7 +173,7 @@ class Mapper:
     def load(self, filename):
         print("LOADING DATA")
         f = open(filename, 'r').read().split('\n')
-        for row in f[:-1]:
+        for row in f:
             row_data = row.split(',')
             mac = row_data[0]
             for rssi in range(1, Utilities.BUCKETS):
