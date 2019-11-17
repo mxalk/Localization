@@ -1,7 +1,14 @@
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.utils import to_categorical
+import keras
+import numpy as np
 
 from Localization import Utilities
 from os import path
 import csv
+
+
 class Thinker:
     """ Class handling AI """
 
@@ -105,6 +112,42 @@ class Thinker:
                 for mac in macslist:
                     if mac != '':
                         self.__add_to_macs(mac)
+
+    def train(self, outfile):
+        model = Sequential()
+        # model.add(Dense(2*len(self.__macs), input_dim=len(self.__macs), activation='relu'))
+        model.add(Dense(3*len(self.__macs), input_dim=len(self.__macs), activation='relu'))
+        model.add(Dense(3*Utilities.ROOMS, activation='relu'))
+        model.add(Dense(2*Utilities.ROOMS, activation='relu'))
+        # model.add(Dense(Utilities.ROOMS, activation='relu'))
+        model.add(Dense(Utilities.ROOMS, activation='softmax'))
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        dataset = []
+        rows = 0
+        with open(self.__read_filename, 'r') as csvfile:
+            csv_reader = csv.reader(csvfile)
+            for row in csv_reader:
+                rows += 1
+                room = int(row[0])
+                i = 0
+                arr = [room]
+                for mac in self.__macs:
+                    i += 1
+                    rssi = 0
+                    if i < len(row) and row[i] != '':
+                        rssi = int(row[i])
+                    arr.append(rssi)
+                dataset.append(arr)
+        dataset = np.array(dataset)
+
+        x = dataset[:, 1:]
+        y = dataset[:, 0]
+        y = to_categorical(y, num_classes=Utilities.ROOMS)
+
+        model.fit(x, y, epochs=1500, batch_size=rows, validation_split=0.5)
+        print("EXPORTING MODEL %s" % outfile)
+        model.save(outfile)
 
     def load_from_mapper(self, m):
         def get_recurr(data, rec_data):
