@@ -43,46 +43,6 @@ class Mapper:
 
     def read(self, jsondata):
         self.print_highlight(jsondata)
-        global_data = self.data
-        all_rooms1 = []
-        all_rooms2 = []
-        all_rooms3 = []
-        for i in range(Utilities.ROOMS):
-            all_rooms1.append(0)
-            all_rooms2.append(0)
-            all_rooms3.append(0)
-        for mac in jsondata:
-            rssi = jsondata[mac]
-            rssi = Utilities.convert_rssi(rssi)
-            if mac in global_data:
-                if rssi in global_data[mac]:
-                    for room in self.data[mac][rssi]:
-                        all_rooms1[room] += 1
-                        all_rooms2[room] += 1 / len(self.data[mac][rssi])
-                        if len(self.data[mac][rssi]) == 1:
-                            all_rooms3[room] += 1
-        results1 = []
-        for i in range(Utilities.ROOMS):
-            if i not in self.rooms:
-                results1.append(0)
-                continue
-            results1.append(all_rooms1[i] * 100 / len(self.rooms[i]))
-        room1 = results1.index(max(results1))
-
-        results2 = []
-        max_item = all_rooms2[0]
-        for i in range(Utilities.ROOMS):
-            score = all_rooms2[i]
-            if score > max_item:
-                max_item = score
-                results2 = [i]
-            elif score == max_item:
-                results2.append(i)
-        room2 = results2
-        if len(results2) == 1:
-            room2 = results2[0]
-
-        room3 = all_rooms3.index(max(all_rooms3))
 
         for i in range(0, Utilities.ROOMS):
             if i not in self.rooms:
