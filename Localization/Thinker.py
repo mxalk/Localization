@@ -25,6 +25,11 @@ class Thinker:
             if self.__read_macs == self.__write_macs:
                 self.__hot_macs = False
 
+        self.__model = None
+        if model_file:
+            print("IMPORTING MODEL %s" % model_file)
+            self.__model = keras.models.load_model(model_file)
+
     def write(self, jsondata):
         room = 0
         for mac in jsondata:
@@ -56,6 +61,25 @@ class Thinker:
             self.__data.append(entry)
             return True
         return False
+
+    def read(self, jsondata):
+        if not self.__model:
+            return 0
+        data = []
+        for mac in self.__macs:
+            if mac in jsondata:
+                data.append(int(jsondata[mac]))
+            else:
+                data.append(0)
+
+        result = 0
+        try:
+            prediction = self.__model.predict(np.array([data]))
+            print(prediction)
+            result = np.argmax(prediction)
+        except ValueError:
+            print("Array size mismatch, your model was probably trained with a different set of MACS. Retraining might solve the issue.")
+        return result
 
     def __add_to_macs(self, mac):
         if mac not in self.__macs:
