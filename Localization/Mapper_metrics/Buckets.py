@@ -1,8 +1,9 @@
+from Localization.Mapper_metrics.Metric import Metric
 from Localization import Utilities
 from Localization import Mapper
 
 
-class Buckets:
+class Buckets(Metric):
     """
     Room buckets which fill by 1 for every room in mac:rssi pair
     Normalize is each bucket divided by number of MACS appearing in that room
@@ -10,7 +11,11 @@ class Buckets:
     Returns int or list
     """
 
-    def __init__(self, m: Mapper, normalize: bool):
+    def __init__(self, m: Mapper, normalize: bool = False):
+        if normalize:
+            super().__init__("Normalized Buckets")
+        else:
+            super().__init__("Buckets")
         self.__m = m
         self.__normalize = normalize
 

@@ -1,8 +1,9 @@
+from Localization.Mapper_metrics.Metric import Metric
 from Localization import Utilities
 from Localization import Mapper
 
 
-class PartialBuckets:
+class PartialBuckets(Metric):
     """
     Room buckets which fill by 1 / (number of rooms) for each value in mac:rssi pair
     e.g. 2 rooms give 0.5 to each bucket, 3 rooms amount to 0.33 each
@@ -11,6 +12,7 @@ class PartialBuckets:
     """
 
     def __init__(self, m: Mapper):
+        super().__init__("Partial Buckets")
         self.__m = m
 
     def decide(self, jsondata):

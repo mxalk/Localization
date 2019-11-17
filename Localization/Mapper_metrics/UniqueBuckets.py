@@ -1,8 +1,9 @@
+from Localization.Mapper_metrics.Metric import Metric
 from Localization import Utilities
 from Localization import Mapper
 
 
-class UniqueBuckets:
+class UniqueBuckets(Metric):
     """
     Room buckets which fill by 1 if only one room corresponds to the mac:rssi pair
 
@@ -10,6 +11,7 @@ class UniqueBuckets:
     """
 
     def __init__(self, m: Mapper):
+        super().__init__("Unique Buckets")
         self.__m = m
 
     def decide(self, jsondata):
