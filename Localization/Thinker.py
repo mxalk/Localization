@@ -105,3 +105,37 @@ class Thinker:
                 for mac in macslist:
                     if mac != '':
                         self.__add_to_macs(mac)
+
+    def load_from_mapper(self, m):
+        def get_recurr(data, rec_data):
+            if len(rec_data) == 0:
+                self.__write_map(data=data, room=room)
+                self.__save(data, room)
+                return
+            mac = list(rec_data)[0]
+            rec_data_tmp = rec_data.copy()
+            new_data = data.copy()
+            del rec_data_tmp[mac]
+            if len(rec_data[mac]) == 0:
+                new_data[mac] = 0
+                get_recurr(new_data, rec_data_tmp)
+            for rssi in rec_data[mac]:
+                new_data[mac] = rssi
+                get_recurr(new_data, rec_data_tmp)
+
+        rooms = set()
+        for mac in m.data:
+            self.__add_to_macs(mac)
+            for rssi in m.data[mac]:
+                for room in m.data[mac][rssi]:
+                    rooms.add(room)
+        for room in rooms:
+            room_data = {}
+            for mac in m.data:
+                room_data[mac] = []
+                for rssi in m.data[mac]:
+                    if room in m.data[mac][rssi]:
+                        rssi = Utilities.convert_rssi(rssi)
+                        if rssi not in room_data[mac]:
+                            room_data[mac].append(rssi)
+            get_recurr({}, room_data)
