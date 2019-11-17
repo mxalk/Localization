@@ -1,13 +1,22 @@
 
+from Localization import Utilities
+from os import path
+import csv
 class Thinker:
     """ Class handling AI """
 
     def __init__(self, read_macs=None, read_filename=None, write_macs=None, write_filename=None, model_file=None):
         self.__data = []
         self.__macs = []
+        self.__read_macs = read_macs
+        self.__read_filename = read_filename
         self.__write_macs = write_macs
         self.__write_filename = write_filename
         self.__hot_macs = False
+        if self.__read_filename and self.__read_macs:
+            self.__load()
+            if self.__read_macs == self.__write_macs:
+                self.__hot_macs = False
 
     def write(self, jsondata):
         room = 0
@@ -65,3 +74,34 @@ class Thinker:
                 else:
                     entry.append('')
             csv_writer.writerow(entry)
+
+    def __load(self):
+        if not self.__read_filename:
+            return
+        self.__load_macs()
+        if path.exists(self.__read_filename):
+            print("LOADING ENTRIES FROM %s" % self.__read_filename)
+            with open(self.__read_filename, 'r') as csvfile:
+                csv_reader = csv.reader(csvfile)
+                for row in csv_reader:
+                    room = int(row[0])
+                    data = {}
+                    i = 0
+                    for mac in self.__macs:
+                        i += 1
+                        rssi = 0
+                        if i < len(row) and row[i] != '':
+                            rssi = int(row[i])
+                        data[mac] = rssi
+                    self.__write_map(data=data, room=room)
+
+    def __load_macs(self):
+        if not self.__read_macs:
+            return
+        if path.exists(self.__read_macs):
+            print("LOADING MACS FROM %s" % self.__read_macs)
+            with open(self.__read_macs, 'r') as macfile:
+                macslist = macfile.read().split('\n')
+                for mac in macslist:
+                    if mac != '':
+                        self.__add_to_macs(mac)
