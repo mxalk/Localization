@@ -4,11 +4,6 @@ import asyncio
 import json
 
 _LOGGER = logging.getLogger(__name__)
-
-# BUCKETS = 50
-# RSSI_OFFSET = 0
-#
-# BUCKET_SIZE = (101-RSSI_OFFSET)/BUCKETS
 ITER = 0
 
 
@@ -47,7 +42,6 @@ class Writer:
             return
         room = b.write(jsondata)
 
-        # m.print()
         global ITER
         print("%5d) WRITE: %d" % (ITER, room))
         ITER += 1
