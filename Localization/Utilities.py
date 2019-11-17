@@ -5,10 +5,9 @@ MAX_RSSI = 100
 # LOG_BASE = 1.5
 BUCKETS = 100
 
-
 def convert_rssi(rssi):
-    # return abs(int(rssi))
-    rssi_new = round((abs(int(rssi))-20)/4)
+    rssi_new = abs(int(rssi))
+    # rssi_new = round((abs(int(rssi))-20)/4)
     # rssi_new = round((math.log(abs(int(rssi))-20, LOG_BASE)))
     # print(str(rssi) + " --> " + str(abs(int(rssi))) + " --> " + str(abs(int(rssi))-20) + " --> " + str(rssi_new))
     # global BUCKETS

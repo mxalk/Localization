@@ -1,17 +1,44 @@
 from Localization import Utilities
 
+from Localization.Mapper_metrics import Buckets
+from Localization.Mapper_metrics import PartialBuckets
+from Localization.Mapper_metrics import UniqueBuckets
+
+import os.path
+
 
 class Mapper:
     """ Class handling data """
 
-    def __init__(self, read_filename=None, write_filename=None):
+    def __init__(self, read_filename: str = None, write_filename: str = None, metrics="all"):
         self.data = {}
         self.rooms = {}
         if read_filename:
             self.load(read_filename)
         self.write_filename = write_filename
 
-    def write(self, jsondata):
+        self.__metrics = []
+        if metrics == "all":
+            self.__metrics.append(Buckets.Buckets(self))
+            self.__metrics.append(Buckets.Buckets(self, normalize=True))
+            self.__metrics.append(PartialBuckets.PartialBuckets(self))
+            self.__metrics.append(UniqueBuckets.UniqueBuckets(self))
+        else:
+            metrics = set(metrics)
+            for metric in metrics:
+                if metric == "buckets":
+                    self.__metrics.append(Buckets.Buckets(self))
+                elif metric == "normbuckets":
+                    self.__metrics.append(Buckets.Buckets(self, normalize=True))
+                elif metric == "partialbuckets":
+                    self.__metrics.append(PartialBuckets.PartialBuckets(self))
+                elif metric == "uniquebuckets":
+                    self.__metrics.append(UniqueBuckets.UniqueBuckets(self))
+            if len(self.__metrics) == 0:
+                self.__metrics.append(Buckets.Buckets(self, normalize=True))
+
+
+    def write(self, jsondata: dict):
         room = 0
         for mac in jsondata:
             if mac == "#":
@@ -19,6 +46,7 @@ class Mapper:
                 break
         if room == 0:
             return 0
+        del jsondata["#"]
         for mac in jsondata:
             rssi = jsondata[mac]
             rssi = Utilities.convert_rssi(rssi)
@@ -26,14 +54,14 @@ class Mapper:
                 self.save()
         return room
 
-    def write_map(self, mac, rssi, data):
+    def write_map(self, mac: str, rssi: int, data: int):
         if mac not in self.data:
             self.data[mac] = {}
         if rssi not in self.data[mac]:
             self.data[mac][rssi] = []
         if data not in self.data[mac][rssi]:
             self.data[mac][rssi].append(data)
-            print("New entry: %s %d %d" % (mac, rssi, data))
+            print("New entry: %s %d --> %d" % (mac, rssi, data))
             if data not in self.rooms:
                 self.rooms[data] = []
             if mac not in self.rooms[data]:
@@ -41,27 +69,30 @@ class Mapper:
             return True
         return False
 
-    def read(self, jsondata):
+    def read(self, jsondata: dict):
         self.print_highlight(jsondata)
 
-        for i in range(0, Utilities.ROOMS):
-            if i not in self.rooms:
-                continue
-            print("%d: %4.1f%% confidence (%d/%2d)  |            %4.1f  |  %4.1f" % (
-                i, results1[i], all_rooms1[i], len(self.rooms[i]), all_rooms2[i], all_rooms3[i]))
-        print("ROOMS:\t\t      %d     |%17s |    %s" % (room1, str(room2), str(room3)))
+        # for i in range(0, Utilities.ROOMS):
+        #     if i not in self.rooms:
+        #         continue
+        #     print("%d: %4.1f%% confidence (%d/%2d)  |            %4.1f  |  %4.1f" % (
+        #         i, results1[i], all_rooms1[i], len(self.rooms[i]), all_rooms2[i], all_rooms3[i]))
+        # print("ROOMS:\t\t      %d     |%17s |    %s" % (room1, str(room2), str(room3)))
 
+        print(jsondata)
         results = []
         for i in range(0, Utilities.ROOMS):
             results.append(0)
-        results[room1] += 1
-        if type(room2) == list:
-            for room in room2:
-                results[room] += 1
-        else:
-            results[room2] += 2
-        results[room3] += 1
+        for metric in self.__metrics:
+            rooms = metric.decide(jsondata=jsondata)
+            print("%30s: %15s" % (metric.get_name() + " reports ", rooms))
+            if type(rooms) == list:
+                for room in rooms:
+                    results[room] += 1
+            elif type(rooms) == int:
+                results[rooms] += 1
         room = results.index(max(results))
+
         return room
 
     def print(self):
@@ -83,7 +114,7 @@ class Mapper:
             print('')
         print('')
 
-    def print_highlight(self, jsondata):
+    def print_highlight(self, jsondata: dict):
         string = "\n\n\n----------------------------------------------------------------------------------------------" \
                  "----------------------------------------------------------------------------------------------\n"
         for mac in self.data:
@@ -131,9 +162,13 @@ class Mapper:
         f.write(string)
 
     def load(self, filename):
+        if not os.path.exists(filename):
+            return
         print("LOADING DATA")
         f = open(filename, 'r').read().split('\n')
         for row in f:
+            if (row == ''):
+                continue
             row_data = row.split(',')
             mac = row_data[0]
             for rssi in range(1, Utilities.BUCKETS):

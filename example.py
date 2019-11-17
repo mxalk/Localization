@@ -13,4 +13,6 @@ def server_mapper():
     s = Localization.Server(m)
     s.add_write_server()
     s.looper()
+
+
 server_mapper()
